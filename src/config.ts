@@ -8,15 +8,23 @@ function required(name: string): string {
   return value;
 }
 
+function optional(name: string): string | undefined {
+  return process.env[name] || undefined;
+}
+
 export const config = {
   port: Number(process.env.PORT ?? 3000),
+  // Las credenciales de WhatsApp son opcionales al arrancar: así se puede
+  // usar el simulador (/) solo con la clave de Claude, antes de tener el
+  // número de WhatsApp Business conectado. Quedan validadas recién al
+  // intentar usarlas (ver whatsapp/client.ts).
   whatsapp: {
-    token: required("WHATSAPP_TOKEN"),
-    phoneNumberId: required("WHATSAPP_PHONE_NUMBER_ID"),
-    verifyToken: required("WHATSAPP_VERIFY_TOKEN"),
+    token: optional("WHATSAPP_TOKEN"),
+    phoneNumberId: optional("WHATSAPP_PHONE_NUMBER_ID"),
+    verifyToken: optional("WHATSAPP_VERIFY_TOKEN"),
   },
   anthropic: {
     apiKey: required("ANTHROPIC_API_KEY"),
   },
-  supervisoraNumber: required("SUPERVISORA_WHATSAPP_NUMBER"),
+  supervisoraNumber: optional("SUPERVISORA_WHATSAPP_NUMBER"),
 };

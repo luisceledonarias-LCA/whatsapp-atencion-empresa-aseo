@@ -1,4 +1,5 @@
 import express from "express";
+import path from "path";
 import { config } from "./config.js";
 import { parsearWebhook } from "./whatsapp/webhookParser.js";
 import { descargarMedia, enviarTexto, marcarComoLeido } from "./whatsapp/client.js";
@@ -9,6 +10,37 @@ import type { MensajeEntrante } from "./types.js";
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.resolve("public")));
+
+/**
+ * Simulador: prueba la clasificación con un mensaje de texto de ejemplo,
+ * sin necesidad de WhatsApp conectado. No envía nada ni guarda nada — solo
+ * corre exactamente la misma lógica de clasificación que usa el webhook real.
+ */
+app.post("/api/simular", async (req, res) => {
+  const texto = String(req.body?.texto ?? "").trim();
+  if (!texto) {
+    res.status(400).json({ error: "Falta el texto del mensaje." });
+    return;
+  }
+
+  const mensaje: MensajeEntrante = {
+    id: "simulacion",
+    de: "simulador",
+    nombrePerfil: "Trabajadora (prueba)",
+    tipo: "texto",
+    texto,
+    timestamp: Date.now(),
+  };
+
+  try {
+    const clasificacion = await clasificarMensaje(mensaje);
+    res.json(clasificacion);
+  } catch (err) {
+    console.error("Error en el simulador:", err);
+    res.status(500).json({ error: err instanceof Error ? err.message : "Error desconocido." });
+  }
+});
 
 /** Verificación del webhook (Meta hace un GET una sola vez al configurarlo). */
 app.get("/webhook", (req, res) => {
@@ -89,6 +121,10 @@ async function procesarMensaje(mensaje: MensajeEntrante, imagenBuffer?: Buffer):
   }
 
   if (clasificacion.escalar_a_supervisora) {
+    if (!config.supervisoraNumber) {
+      console.warn("SUPERVISORA_WHATSAPP_NUMBER no está configurado; no se pudo avisar la escalación.");
+      return;
+    }
     const prioridad = clasificacion.categoria.toUpperCase();
     const quien = mensaje.nombrePerfil ?? mensaje.de;
     const cuerpo = clasificacion.resumen_para_supervisora ?? mensaje.texto ?? "(sin texto)";

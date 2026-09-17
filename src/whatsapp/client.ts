@@ -2,18 +2,29 @@ import { config } from "../config.js";
 
 const GRAPH_BASE = "https://graph.facebook.com/v21.0";
 
-function authHeaders() {
+function credenciales(): { token: string; phoneNumberId: string } {
+  const { token, phoneNumberId } = config.whatsapp;
+  if (!token || !phoneNumberId) {
+    throw new Error(
+      "Faltan WHATSAPP_TOKEN y/o WHATSAPP_PHONE_NUMBER_ID en tu .env. Configúralos para poder enviar mensajes por WhatsApp."
+    );
+  }
+  return { token, phoneNumberId };
+}
+
+function authHeaders(token: string) {
   return {
-    Authorization: `Bearer ${config.whatsapp.token}`,
+    Authorization: `Bearer ${token}`,
     "Content-Type": "application/json",
   };
 }
 
 /** Envía un mensaje de texto simple a un número de WhatsApp. */
 export async function enviarTexto(numeroDestino: string, texto: string): Promise<void> {
-  const res = await fetch(`${GRAPH_BASE}/${config.whatsapp.phoneNumberId}/messages`, {
+  const { token, phoneNumberId } = credenciales();
+  const res = await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
     method: "POST",
-    headers: authHeaders(),
+    headers: authHeaders(token),
     body: JSON.stringify({
       messaging_product: "whatsapp",
       to: numeroDestino,
@@ -29,9 +40,10 @@ export async function enviarTexto(numeroDestino: string, texto: string): Promise
 
 /** Marca un mensaje entrante como leído (aparece el doble check azul). */
 export async function marcarComoLeido(mensajeId: string): Promise<void> {
-  await fetch(`${GRAPH_BASE}/${config.whatsapp.phoneNumberId}/messages`, {
+  const { token, phoneNumberId } = credenciales();
+  await fetch(`${GRAPH_BASE}/${phoneNumberId}/messages`, {
     method: "POST",
-    headers: authHeaders(),
+    headers: authHeaders(token),
     body: JSON.stringify({
       messaging_product: "whatsapp",
       status: "read",
@@ -41,9 +53,9 @@ export async function marcarComoLeido(mensajeId: string): Promise<void> {
 }
 
 /** Obtiene la URL temporal de descarga de un archivo multimedia (audio o imagen) a partir de su mediaId. */
-async function obtenerUrlMedia(mediaId: string): Promise<string> {
+async function obtenerUrlMedia(mediaId: string, token: string): Promise<string> {
   const res = await fetch(`${GRAPH_BASE}/${mediaId}`, {
-    headers: { Authorization: `Bearer ${config.whatsapp.token}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     throw new Error(`No se pudo obtener la URL del media ${mediaId}: ${res.status}`);
@@ -54,9 +66,10 @@ async function obtenerUrlMedia(mediaId: string): Promise<string> {
 
 /** Descarga el contenido binario de un archivo multimedia enviado por WhatsApp. */
 export async function descargarMedia(mediaId: string): Promise<Buffer> {
-  const url = await obtenerUrlMedia(mediaId);
+  const { token } = credenciales();
+  const url = await obtenerUrlMedia(mediaId, token);
   const res = await fetch(url, {
-    headers: { Authorization: `Bearer ${config.whatsapp.token}` },
+    headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) {
     throw new Error(`No se pudo descargar el media ${mediaId}: ${res.status}`);
