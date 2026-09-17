@@ -1,0 +1,25 @@
+{
+  "name": "whatsapp-atencion-empresa-aseo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agente de WhatsApp para triage de mensajes de trabajadoras de una empresa de aseo.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "report:mensual": "tsx src/reports/monthlyReport.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.126.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.9.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}
